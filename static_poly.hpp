@@ -276,46 +276,46 @@ struct static_poly {
 
 
 template <class T, int N, class U>
-constexpr static_poly<T,std::max(N,1)> operator + (static_poly<T,N> a, const U& b) {
+constexpr static_poly<T, std::max(N, 1)> operator + (static_poly<T, N> a, const U& b) {
    if (N) return a += b;
-   return static_poly<T,1>(b);
+   return static_poly<T, 1>(b);
 }
 
 template <class T, int N, class U>
-constexpr static_poly<T,std::max(N,1)> operator - (static_poly<T,N> a, const U& b) {
+constexpr static_poly<T, std::max(N, 1)> operator - (static_poly<T, N> a, const U& b) {
    if(N) return a -= b;
-   return static_poly<T,1>(-b);
+   return static_poly<T, 1>(-b);
 }
 
 template <class T, int N, class U>
-constexpr static_poly<T,N> operator * (static_poly<T,N> a, const U& b) {
+constexpr static_poly<T, N> operator * (static_poly<T, N> a, const U& b) {
    return a *= b;
 }
 
 template <class T, int N, class U>
-constexpr static_poly<T,N> operator / (static_poly<T,N> a, const U& b) {
+constexpr static_poly<T, N> operator / (static_poly<T, N> a, const U& b) {
    return a /= b;
 }
 
 template <class T, int N, class U>
-constexpr static_poly<T,N> operator % (static_poly<T,N> a, const U& b) {
+constexpr static_poly<T, N> operator % (static_poly<T, N> a, const U& b) {
    return a %= b;
 }
 
 template <class U, class T, int N>
-constexpr static_poly<T,std::max(N,1)> operator + (const U& a, static_poly<T,N> b) {
+constexpr static_poly<T, std::max(N, 1)> operator + (const U& a, static_poly<T, N> b) {
    if (N) return b += a;
-   return static_poly<T,1>(a);
+   return static_poly<T, 1>(a);
 }
 
 template <class U, class T, int N>
-constexpr static_poly<T,std::max(N,1)> operator - (const U& a, const static_poly<T,N>& b) {
-   static_poly<T,std::max(N,1)> result(a);
+constexpr static_poly<T,std::max(N, 1)> operator - (const U& a, const static_poly<T, N>& b) {
+   static_poly<T, std::max(N, 1)> result(a);
    return result - b;
 }
 
 template <class U, class T, int N>
-constexpr static_poly<T> operator * (const U& a, static_poly<T> b) {
+constexpr static_poly<T, N> operator * (const U& a, static_poly<T, N> b) {
    return b *= a;
 }
 
@@ -338,32 +338,24 @@ constexpr static_poly<T, std::max(N1, N2)> operator - (const static_poly<T, N1>&
 template <class T, int N1, int N2>
 constexpr static_poly<T, N1 + N2> operator * (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
    static_poly<T, N1 + N2> prod;
-   if (!b) { // b is zero
+   if (!a || !b) { // a or b is zero
       return prod;
    }
-   for (size_type i = 0; i < value.size(); ++i)
-      for (size_type j = 0; j < size(); ++j)
-         prod[i+j] += m_data[j] * value[i];
-   m_data.swap(prod);
-   return *this;
+   for (int i = 0; i < N1; ++i)
+      for (int j = 0; j < N2; ++j)
+         prod[i+j] += a[i] * b[j];
+   return prod;
 }
 
 template <class T, int N1, int N2>
-constexpr static_poly<T, N1 - N2> operator / (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
-   *this = quotient_remainder(*this, value).first;
-   return *this;
+constexpr static_poly<T, std::max(N1 - N2, 0)> operator / (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
+   return quotient_remainder(a, b).first;
 }
 
 template <class T, int N1, int N2>
-constexpr static_poly<T> operator %(const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
-   *this = quotient_remainder(*this, value).second;
-   return *this;
+constexpr static_poly<T, std::min(N1, N2)> operator %(const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
+   return quotient_remainder(a, b).second;
 }
-
-    /* Provides operators *, /, % for two polynomials (using member += etc.);
-     * operators >, <=, >= using operator < ; and operator != using operator ==.
-     */
-
 
 template <class T, int N1, int N2>
 constexpr bool operator == (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
@@ -375,11 +367,30 @@ constexpr bool operator == (const static_poly<T, N1> &a, const static_poly<T, N2
 }
 
 template <class T, int N1, int N2>
+constexpr bool operator != (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
+   return !(a == b);
+}
+
+template <class T, int N1, int N2>
 constexpr bool operator < (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
     if (a.degree() != b.degree())
         return a.degree() < b.degree();
     return std::lexicographical_compare(a.data().rbegin(), a.data().rend(),
                                         b.data().rbegin(), b.data().rend());
+}
+template <class T, int N1, int N2>
+constexpr bool operator <= (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
+   return a < b || a == b;
+}
+   
+template <class T, int N1, int N2>
+constexpr bool operator >= (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
+   return !(a < b);
+}
+ 
+template <class T, int N1, int N2>
+constexpr bool operator > (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
+   return !(a <= b);
 }
 
 template <class T, int N1>
