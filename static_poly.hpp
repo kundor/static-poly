@@ -12,7 +12,7 @@
 #ifndef NAM_STATIC_POLYNOMIAL_HPP
 #define NAM_STATIC_POLYNOMIAL_HPP
 
-#include <boost/assert.hpp>
+#include <cassert>
 
 #include <ostream>
 #include <algorithm> // minmax
@@ -36,7 +36,7 @@ namespace detail {
 * subtlety of distinction.
 */
 template <typename T, typename N>
-BOOST_DEDUCED_TYPENAME disable_if_c<std::numeric_limits<T>::is_integer, void >::type
+typename disable_if_c<std::numeric_limits<T>::is_integer, void >::type
 division_impl(static_poly<T> &q, static_poly<T> &u, const static_poly<T>& v, N n, N k)
 {
     q[k] = u[n + k] / v[n];
@@ -79,7 +79,7 @@ T integer_power(T t, N n)
 * don't currently have that subtlety of distinction.
 */
 template <typename T, typename N>
-BOOST_DEDUCED_TYPENAME enable_if_c<std::numeric_limits<T>::is_integer, void >::type
+typename enable_if_c<std::numeric_limits<T>::is_integer, void >::type
 division_impl(static_poly<T> &q, static_poly<T> &u, const static_poly<T>& v, N n, N k)
 {
     q[k] = u[n + k] * integer_power(v[n], k);
@@ -102,9 +102,9 @@ template <typename T>
 std::pair< static_poly<T>, static_poly<T> >
 division(static_poly<T> u, const static_poly<T>& v)
 {
-    BOOST_ASSERT(v.size() <= u.size());
-    BOOST_ASSERT(v);
-    BOOST_ASSERT(u);
+    assert(v.size() <= u.size());
+    assert(v);
+    assert(u);
 
     typedef typename static_poly<T>::size_type N;
     
@@ -131,7 +131,7 @@ division(static_poly<T> u, const static_poly<T>& v)
 template <typename T>
 std::pair< static_poly<T>, static_poly<T> >
 quotient_remainder(const static_poly<T>& dividend, const static_poly<T>& divisor) {
-    BOOST_ASSERT(divisor);
+    assert(divisor);
     if (dividend.size() < divisor.size())
         return std::make_pair(static_poly<T,0>(), dividend);
     return detail::division(dividend, divisor);
@@ -200,7 +200,7 @@ struct static_poly {
    }
    
    constexpr T operator() (T z) const {
-      return boost::math::tools::evaluate_polynomial(&m_data[0], z, N);;
+      return boost::math::tools::evaluate_polynomial(&m_data[0], z, N);
    }
    
    constexpr const std::pair<const T*, const T*> data() const {
@@ -257,14 +257,14 @@ struct static_poly {
 
    static_poly& operator >>=(int n)
    {
-       BOOST_ASSERT(n >= 0 && static_cast<unsigned>(n) <= m_data.size());
+       assert(n >= 0 && static_cast<unsigned>(n) <= m_data.size());
        m_data.erase(m_data.begin(), m_data.begin() + n);
        return *this;
    }
 
    static_poly& operator <<=(int n)
    {
-       BOOST_ASSERT(n >= 0);
+       assert(n >= 0);
        m_data.insert(m_data.begin(), n, static_cast<T>(0));
        return *this;
    }
