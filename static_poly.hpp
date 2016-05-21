@@ -1,5 +1,5 @@
 //  (C) Copyright Nick Matteo 2016.
-//  Adapted from boost/math/tools/polynomial.hpp with these notices:
+//  Adapted from boost/math/tools/polynomial.hpp (from Boost 1.61) containing these notices:
 
 //  (C) Copyright John Maddock 2006.
 //  (C) Copyright Jeremy William Murphy 2015.
@@ -13,13 +13,13 @@
 #define NAM_STATIC_POLYNOMIAL_HPP
 
 #include <cassert>
-
 #include <ostream>
 #include <algorithm> // minmax
 #include <limits> // is_integer
 #include <utility> // pair
 #include <initializer_list>
-
+#include <stdexcept>
+#include "evaluate.hpp"
 
 template <typename T>
 class static_poly;
@@ -149,15 +149,11 @@ struct static_poly {
    // construct:
    constexpr static_poly() : m_data{} {}
 
-   template <class U>
-   explicit constexpr static_poly(const U* data) {
-      //U better point to at least N things!
-      for (int i = 0; i < N; ++i)
-         m_data[i] = U[i];
-   }
+   template <class U, int M>
+   explicit constexpr static_poly(const U (&data)[M]) : static_poly(&data, &data + M) {}
 
-   template <class I>
-   constexpr static_poly(I first, I last) {
+   template <class It>
+   constexpr static_poly(It first, It last) {
       int i = 0;
       while (i < N && first != last)
          m_data[i++] = *first++;
@@ -169,12 +165,13 @@ struct static_poly {
    explicit constexpr static_poly(const U& point) : m_data{point} {}
 
    // copy:
-   static_poly(const static_poly& p) : static_poly(&p.m_data) {}
-   // call the pointer constructor; p has the same size as this.
+   static_poly(const static_poly& p) : static_poly(p.m_data) {}
+   // call the array constructor; p has the same size as this.
 
    template <class U, int N1>
-   explicit static_poly(const static_poly<U,N1>& p)
-   : static_poly(p.m_data, p.m_data + N1) {} // call the pair-of-iterators constructor
+   explicit static_poly(const static_poly<U, N1>& p)
+   : static_poly(&p.m_data, &p.m_data + N1) {} // call the pair-of-iterators constructor.
+   // if N1 > N, we lose the high terms
    
    constexpr static_poly(std::initializer_list<T> l)
    : static_poly(std::begin(l), std::end(l)) {}
@@ -188,7 +185,7 @@ struct static_poly {
       for (int i = N-1; i >= 0; --i)
          if (m_data[i])
             return i;
-      return -1; // zero polynomial: should be -∞, or undefined.
+      return -1; // zero polynomial: should really be -∞, or undefined.
    }
 
    constexpr T& operator[] (size_type i) {
@@ -200,16 +197,16 @@ struct static_poly {
    }
    
    constexpr T operator() (T z) const {
-      return boost::math::tools::evaluate_polynomial(&m_data[0], z, N);
+      return evaluate_polynomial(m_data, z);
    }
    
    constexpr const std::pair<const T*, const T*> data() const {
       // return a pair of iterators, suitable for use with Boost.Range
-      return std::make_pair(m_data, m_data + N);
+      return std::make_pair(&m_data, &m_data + N);
    }
 
    constexpr std::pair<T*, T*> & data() {
-      return std::make_pair(m_data, m_data + N);
+      return std::make_pair(&m_data, &m_data + N);
    }
 
    // operators:
@@ -427,13 +424,8 @@ constexpr bool even(static_poly<T> const &a) {
 template <class T>
 constexpr static_poly<T> pow(static_poly<T> base, int exp) {
     if (exp < 0)
-        return policies::raise_domain_error(
-                "boost::math::tools::pow<%1%>",
-                "Negative powers are not supported for polynomials.",
-                base, policies::policy<>());
-        // if the policy is ignore_error or errno_on_error, raise_domain_error
-        // will return std::numeric_limits<static_poly<T>>::quiet_NaN(), which
-        // defaults to static_poly<T>(), which is the zero static_poly
+        throw(std::domain_error("Negative powers are not supported for polynomials.");
+        // if this is called as constexpr, trying to throw is a compile-time error: good
     static_poly<T> result(T(1));
     if (exp & 1)
         result = base;
