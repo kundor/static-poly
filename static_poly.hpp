@@ -385,19 +385,9 @@ constexpr static_poly<T, N> operator - (static_poly<T, N> a) {
 }
 
 template <class T>
-constexpr bool odd(static_poly<T> const &a) {
-    return a.size() > 0 && a[0] != static_cast<T>(0);
-}
-
-template <class T>
-constexpr bool even(static_poly<T> const &a) {
-    return !odd(a);
-}
-
-template <class T>
 constexpr static_poly<T> pow(static_poly<T> base, int exp) {
     if (exp < 0)
-        throw(std::domain_error("Negative powers are not supported for polynomials.");
+        throw std::domain_error("Negative powers are not supported for polynomials.");
         // if this is called as constexpr, trying to throw is a compile-time error: good
     static_poly<T> result(T(1));
     if (exp & 1)
