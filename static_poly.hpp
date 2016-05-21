@@ -252,20 +252,6 @@ struct static_poly {
       return *this;
    }
 
-   static_poly& operator >>=(int n)
-   {
-       assert(n >= 0 && static_cast<unsigned>(n) <= m_data.size());
-       m_data.erase(m_data.begin(), m_data.begin() + n);
-       return *this;
-   }
-
-   static_poly& operator <<=(int n)
-   {
-       assert(n >= 0);
-       m_data.insert(m_data.begin(), n, static_cast<T>(0));
-       return *this;
-   }
-
    explicit constexpr operator bool() const {
       return degree() >= 0;
    }
@@ -350,7 +336,7 @@ constexpr static_poly<T, std::max(N1 - N2, 0)> operator / (const static_poly<T, 
 }
 
 template <class T, int N1, int N2>
-constexpr static_poly<T, std::min(N1, N2)> operator %(const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
+constexpr static_poly<T, std::min(N1, N2)> operator % (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
    return quotient_remainder(a, b).second;
 }
 
@@ -388,19 +374,6 @@ constexpr bool operator >= (const static_poly<T, N1> &a, const static_poly<T, N2
 template <class T, int N1, int N2>
 constexpr bool operator > (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
    return !(a <= b);
-}
-
-template <class T, int N1>
-constexpr auto operator >> (static_poly<T> a, int b) -> static_poly<T, std:::max(N - b, 0)> {
-
-    a >>= b;
-    return a;
-}
-
-template <class T>
-constexpr static_poly<T> operator << (static_poly<T> a, int b) {
-    a <<= b;
-    return a;
 }
 
 // Unary minus (negate).
