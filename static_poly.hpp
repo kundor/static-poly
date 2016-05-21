@@ -360,8 +360,8 @@ template <class T, int N1, int N2>
 constexpr bool operator == (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
    int n = a.degree();
    if (b.degree() != n) return false;
-   for (int i = 0; i < n; ++i)
-      if (a[i] != b[i]) return false;
+   for (; n >= 0; --n)
+      if (a[n] != b[n]) return false;
    return true;
 }
 
@@ -372,11 +372,16 @@ constexpr bool operator != (const static_poly<T, N1> &a, const static_poly<T, N2
 
 template <class T, int N1, int N2>
 constexpr bool operator < (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
-    if (a.degree() != b.degree())
-        return a.degree() < b.degree();
-    return std::lexicographical_compare(a.data().rbegin(), a.data().rend(),
-                                        b.data().rbegin(), b.data().rend());
+   int k = a.degree();
+   if (b.degree() != k)
+        return k < b.degree();
+   for (; k >= 0; --k) {
+      if (a[k] != b[k])
+         return a[k] < b[k];
+   }
+   return false; // equal
 }
+
 template <class T, int N1, int N2>
 constexpr bool operator <= (const static_poly<T, N1> &a, const static_poly<T, N2> &b) {
    return a < b || a == b;
@@ -415,10 +420,9 @@ constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
     }
     return result;
 }
-
-// A pow with an argument for exp would be good--
-// but how big must the result be? We can't determine the return type
-// at compile time.
+/* A pow with an argument for exp would be nice--
+ * but how big must the result be? We can't determine the return type
+ * at compile time. */
 
 namespace detail {
    struct xpow {
@@ -442,11 +446,13 @@ inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& pol
       return os << '0';
    if (i == 0)
       return os << poly[0];
+
    if (poly[i] == T{-1})
       os << '-';
    else if (poly[i] != T{1})
       os << poly[i];
    os << xpow{i};
+
    for (--i; i > 0; --i) {
       if (poly[i] == T{1})
          os << " + " << xpow{i};
@@ -457,6 +463,7 @@ inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& pol
       else if (poly[i] < T{0})
          os << " - " << -poly[i] << xpow{i};
    }
+
    if (poly[0] > T{0})
       os << " + " << poly[0];
    else if (poly[0] < T{0})
