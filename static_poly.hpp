@@ -330,6 +330,22 @@ constexpr static_poly<T, N1 + N2> operator * (const static_poly<T, N1>& a, const
    return prod;
 }
 
+namespace detail {
+   // special case of multiplication: two same-sized polys into another of the same size,
+   // assuming that there's enough "headroom" (tail of zero coefficients) so the result fits
+   template <class T, int N>
+   constexpr static_poly<T, N> mul(const static_poly<T, N>& a, const static_poly<T, N>& b) {
+      static_poly<T, N> prod;
+      if (!a || !b) { // a or b is zero
+         return prod;
+      }
+      for (int i = 0; i < N; ++i)
+         for (int j = 0; j < N-i; ++j)
+            prod[i+j] += a[i] * b[j];
+      return prod;
+   }
+}
+
 template <class T, int N1, int N2>
 constexpr static_poly<T, std::max(N1 - N2, 0)> operator / (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
    return quotient_remainder(a, b).first;
@@ -384,34 +400,72 @@ constexpr static_poly<T, N> operator - (static_poly<T, N> a) {
    return a;
 }
 
-template <class T>
-constexpr static_poly<T> pow(static_poly<T> base, int exp) {
-    if (exp < 0)
-        throw std::domain_error("Negative powers are not supported for polynomials.");
-        // if this is called as constexpr, trying to throw is a compile-time error: good
-    static_poly<T> result(T(1));
-    if (exp & 1)
+template <int exp, class T, int N>
+constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
+   static_assert(exp >= 0, "Negative power not supported");
+   static_poly<T, N*exp> result{T{1}};
+   static_poly<T, N*exp> base{b};
+   if (exp & 1)
         result = base;
     /* "Exponentiation by squaring" */
     while (exp >>= 1) {
-        base *= base;
+        base = detail::mul(base, base);
         if (exp & 1)
-            result *= base;
+            result = detail::mul(result, base);
     }
     return result;
 }
 
-template <class charT, class traits, class T>
-inline std::basic_ostream<charT, traits>& operator << (std::basic_ostream<charT, traits>& os, const static_poly<T>& poly) {
-   os << "{ ";
-   for(unsigned i = 0; i < poly.size(); ++i)
-   {
-      if(i) os << ", ";
-      os << poly[i];
+// A pow with an argument for exp would be good--
+// but how big must the result be? We can't determine the return type
+// at compile time.
+
+namespace detail {
+   struct xpow {
+      int i;
+   };
+
+   inline std::ostream& operator << (std::ostream& os, xpow x) {
+      if (x.i == 1)
+         os << 'x';
+      else if (x.i > 1)
+         os << "x^" << i;
+      return os;
    }
-   os << " }";
+}
+
+template <class T, int N>
+inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& poly) {
+   using detail::xpow;
+   int i = poly.degree();
+   if (i == -1)
+      return os << '0';
+   if (i == 0)
+      return os << poly[0];
+   if (poly[i] == T{-1})
+      os << '-';
+   else if (poly[i] != T{1})
+      os << poly[i];
+   os << xpow{i};
+   for (--i; i > 0; --i) {
+      if (poly[i] == T{1})
+         os << " + " << xpow{i};
+      else if (poly[i] > T{0})
+         os << " + " << poly[i] << xpow{i};
+      else if (poly[i] == T{-1})
+         os << " - " << xpow{i};
+      else if (poly[i] < T{0})
+         os << " - " << -poly[i] << xpow{i};
+   }
+   if (poly[0] > T{0})
+      os << " + " << poly[0];
+   else if (poly[0] < T{0})
+      os << " - " << -poly[0];
    return os;
 }
+// Todo: if T does not have <, > (e.g. complex) specialize
+// is_positive (e.g., for complex, quaternion--if initial or majority are positive
+// (i.e. only introduce with " - " if initial and majority are negative)
 
 #endif // NAM_STATIC_POLYNOMIAL_HPP
 
