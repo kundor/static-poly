@@ -35,23 +35,19 @@ namespace detail {
 * Template-parameter T actually must be a field but we don't currently have that
 * subtlety of distinction.
 */
-template <typename T, typename N>
+template <typename T, int N1, int N2, int N3>
 typename disable_if_c<std::numeric_limits<T>::is_integer, void >::type
-division_impl(static_poly<T> &q, static_poly<T> &u, const static_poly<T>& v, N n, N k)
-{
+constexpr division_impl(static_poly<T, N3> &q, static_poly<T, N1> &u, const static_poly<T, N2>& v, int n, int k) {
     q[k] = u[n + k] / v[n];
-    for (N j = n + k; j > k;)
-    {
+    for (int j = n + k; j > k;) {
         j--;
         u[j] -= q[k] * v[j - k];
     }
 }
 
-template <class T, class N>
-T integer_power(T t, N n)
-{
-   switch(n)
-   {
+template <class T>
+constexpr T integer_power(T t, int n) {
+   switch(n) {
    case 0:
       return static_cast<T>(1u);
    case 1:
@@ -63,7 +59,7 @@ T integer_power(T t, N n)
    }
    T result = integer_power(t, n / 2);
    result *= result;
-   if(n & 1)
+   if (n & 1)
       result *= t;
    return result;
 }
@@ -78,16 +74,14 @@ T integer_power(T t, N n)
 * Template-parameter T actually must be a unique factorization domain but we
 * don't currently have that subtlety of distinction.
 */
-template <typename T, typename N>
+template <typename T, int N1, int N2, int N3>
 typename enable_if_c<std::numeric_limits<T>::is_integer, void >::type
-division_impl(static_poly<T> &q, static_poly<T> &u, const static_poly<T>& v, N n, N k)
-{
-    q[k] = u[n + k] * integer_power(v[n], k);
-    for (N j = n + k; j > 0;)
-    {
-        j--;
-        u[j] = v[n] * u[j] - (j < k ? T(0) : u[n + k] * v[j - k]);
-    }
+constexpr division_impl(static_poly<T, N3> &q, static_poly<T, N1> &u, const static_poly<T, N2>& v, int n, int k) {
+   q[k] = u[n + k] * integer_power(v[n], k);
+   for (int j = n + k; j > 0;) {
+      j--;
+      u[j] = v[n] * u[j] - (j < k ? T(0) : u[n + k] * v[j - k]);
+   }
 }
 
 
@@ -98,28 +92,21 @@ division_impl(static_poly<T> &q, static_poly<T> &u, const static_poly<T>& v, N n
  * @param   u   Dividend.
  * @param   v   Divisor.
  */
-template <typename T>
-std::pair< static_poly<T>, static_poly<T> >
-division(static_poly<T> u, const static_poly<T>& v)
-{
-    assert(v.size() <= u.size());
-    assert(v);
-    assert(u);
+template <typename T, int N1, int N2>
+std::pair< static_poly<T, std::max(N1 - N2 + 1, 1)>, static_poly<T, std::min(N1, N2)> >
+constexpr division(static_poly<T, N1> u, const static_poly<T, N2>& v) {
+   assert(v.size() <= u.size());
+   assert(v);
+   assert(u);
 
-    typedef typename static_poly<T>::size_type N;
-    
-    N const m = u.size() - 1, n = v.size() - 1;
-    N k = m - n;
-    static_poly<T> q;
-    q.data().resize(m - n + 1);
+   const int m = u.degree(), n = v.degree();
+   int k = m - n;
+   static_poly<T, std::max(N1 - N2 + 1, 1)> q;
 
-    do
-    {
-        division_impl(q, u, v, n, k);
-    }
-    while (k-- != 0);
-    u.data().resize(n);
-    return std::make_pair(q, u);
+   do division_impl(q, u, v, n, k);
+   while (k--); // stops when k was already 0
+
+   return std::make_pair(q, static_poly<T, std::min(N1, N2)>(u));
 }
 
 } // namespace detail
@@ -128,13 +115,13 @@ division(static_poly<T> u, const static_poly<T>& v)
  * because the same amount of computation yields both.
  * This function is not defined for division by zero: user beware.
  */
-template <typename T>
-std::pair< static_poly<T>, static_poly<T> >
-quotient_remainder(const static_poly<T>& dividend, const static_poly<T>& divisor) {
-    assert(divisor);
-    if (dividend.size() < divisor.size())
-        return std::make_pair(static_poly<T,0>(), dividend);
-    return detail::division(dividend, divisor);
+template <typename T, int N1, int N2>
+std::pair< static_poly<T, std::max(N1 - N2 + 1, 1)>, static_poly<T, std::min(N1, N2)> >
+constexpr quotient_remainder(const static_poly<T, N1>& dividend, const static_poly<T, N2>& divisor) {
+   assert(divisor);
+   if (dividend.degree() < divisor.degree())
+      return std::make_pair(static_poly<T, 1>(), static_poly<T, std::min(N1, N2)>(dividend));
+   return detail::division(dividend, divisor);
 }
 
 
@@ -347,7 +334,7 @@ namespace detail {
 }
 
 template <class T, int N1, int N2>
-constexpr static_poly<T, std::max(N1 - N2, 0)> operator / (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
+constexpr static_poly<T, std::max(N1 - N2 + 1, 1)> operator / (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
    return quotient_remainder(a, b).first;
 }
 
