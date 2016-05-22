@@ -22,7 +22,7 @@
 #include "evaluate.hpp"
 
 template <typename T, int N>
-class static_poly;
+struct static_poly;
 
 namespace detail {
 
@@ -137,7 +137,7 @@ struct static_poly {
    constexpr static_poly() : m_data{} {}
 
    template <class U, int M>
-   explicit constexpr static_poly(const U (&data)[M]) : static_poly(&data, &data + M) {}
+   explicit constexpr static_poly(const U (&data)[M]) : static_poly(data, data + M) {}
 
    template <class It>
    constexpr static_poly(It first, It last) : m_data{} {
@@ -150,12 +150,12 @@ struct static_poly {
    explicit constexpr static_poly(const U& point) : m_data{point} {}
 
    // copy:
-   static_poly(const static_poly& p) : static_poly(p.m_data) {}
+   constexpr static_poly(const static_poly& p) : static_poly(p.m_data) {}
    // call the array constructor; p has the same size as this.
 
    template <class U, int N1>
-   explicit static_poly(const static_poly<U, N1>& p)
-   : static_poly(&p.m_data, &p.m_data + N1) {} // call the pair-of-iterators constructor.
+   explicit constexpr static_poly(const static_poly<U, N1>& p)
+   : static_poly(p.m_data, p.m_data + N1) {} // call the pair-of-iterators constructor.
    // if N1 > N, we lose the high terms
    
    constexpr static_poly(std::initializer_list<T> l)
