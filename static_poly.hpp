@@ -140,12 +140,10 @@ struct static_poly {
    explicit constexpr static_poly(const U (&data)[M]) : static_poly(&data, &data + M) {}
 
    template <class It>
-   constexpr static_poly(It first, It last) {
+   constexpr static_poly(It first, It last) : m_data{} {
       int i = 0;
       while (i < N && first != last)
          m_data[i++] = *first++;
-      for (; i < N; ++i)
-         m_data[i] = 0;
    }
 
    template <class U>
