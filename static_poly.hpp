@@ -15,13 +15,13 @@
 #include <cassert>
 #include <ostream>
 #include <algorithm> // minmax
-#include <limits> // is_integer
+#include <type_traits> // enable_if, is_integral
 #include <utility> // pair
 #include <initializer_list>
 #include <stdexcept>
 #include "evaluate.hpp"
 
-template <typename T>
+template <typename T, int N>
 class static_poly;
 
 namespace detail {
@@ -36,7 +36,7 @@ namespace detail {
 * subtlety of distinction.
 */
 template <typename T, int N1, int N2, int N3>
-typename disable_if_c<std::numeric_limits<T>::is_integer, void >::type
+std::enable_if_t<!std::is_integral<T>::value> /*void*/
 constexpr division_impl(static_poly<T, N3> &q, static_poly<T, N1> &u, const static_poly<T, N2>& v, int n, int k) {
     q[k] = u[n + k] / v[n];
     for (int j = n + k; j > k;) {
@@ -75,7 +75,7 @@ constexpr T integer_power(T t, int n) {
 * don't currently have that subtlety of distinction.
 */
 template <typename T, int N1, int N2, int N3>
-typename enable_if_c<std::numeric_limits<T>::is_integer, void >::type
+std::enable_if_t<std::is_integral<T>::value> /*void*/
 constexpr division_impl(static_poly<T, N3> &q, static_poly<T, N1> &u, const static_poly<T, N2>& v, int n, int k) {
    q[k] = u[n + k] * integer_power(v[n], k);
    for (int j = n + k; j > 0;) {
@@ -229,7 +229,7 @@ struct static_poly {
    constexpr static_poly& operator %=(const U& value) {
       // In the case that T is integral, this preserves the semantics
       // p == r*(p/r) + (p % r), for polynomial<T> p and U r.
-      if (std::numeric_limits<T>::is_integer) {
+      if (std::is_integral<T>::value) {
          for (T& i : m_data)
             i -= T(value * T(i / value));
       } else {
@@ -397,12 +397,13 @@ constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
    static_assert(exp >= 0, "Negative power not supported");
    static_poly<T, N*exp> result{T{1}};
    static_poly<T, N*exp> base{b};
+   int ex = exp;
    if (exp & 1)
         result = base;
     /* "Exponentiation by squaring" */
-    while (exp >>= 1) {
+    while (ex >>= 1) {
         base = detail::mul(base, base);
-        if (exp & 1)
+        if (ex & 1)
             result = detail::mul(result, base);
     }
     return result;
@@ -420,7 +421,7 @@ namespace detail {
       if (x.i == 1)
          os << 'x';
       else if (x.i > 1)
-         os << "x^" << i;
+         os << "x^" << x.i;
       return os;
    }
 }

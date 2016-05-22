@@ -8,6 +8,7 @@
 #define NAM_EVALUATE_HPP
 
 #include <boost/mpl/int.hpp>
+namespace mpl = boost::mpl;
 #include "polynomial_horner2_20.hpp"
 
 //
