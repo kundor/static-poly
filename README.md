@@ -18,10 +18,9 @@ clang-703.0.31.  `example.cpp` must be compiled with the option
 see [PR71226](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71226).
 
 The only requirements for the header `static_poly.hpp` itself are a C++14
-standard libary and Boost (specifically  Boost.MPL).  The `<<` operator for
-stream output, in `static_poly_io.hpp`, also uses Boost.Range,
-Boost.TypeTraits, and Boost.Math.  These also suffice for the main example
-(`example.cpp`).
+standard libary and Boost (specifically Boost.MPL).  The `<<` operator for
+stream output, in `static_poly_io.hpp`, also uses Boost.Range and Boost.Math.
+These also suffice for the main example (`example.cpp`).
 
 For the complex example, this [static_math library](https://github.com/kundor/static_math)
 for compile-time mathematics support is required.  The standard library complex
