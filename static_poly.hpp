@@ -119,8 +119,9 @@ template <typename T, int N1, int N2>
 std::pair< static_poly<T, std::max(N1 - N2 + 1, 1)>, static_poly<T, std::min(N1, N2)> >
 constexpr quotient_remainder(const static_poly<T, N1>& dividend, const static_poly<T, N2>& divisor) {
    assert(divisor);
+   constexpr int sz = std::max(N1 - N2 + 1, 1);
    if (dividend.degree() < divisor.degree())
-      return std::make_pair(static_poly<T, 1>(), static_poly<T, std::min(N1, N2)>(dividend));
+      return std::make_pair(static_poly<T, sz>(), static_poly<T, std::min(N1, N2)>(dividend));
    return detail::division(dividend, divisor);
 }
 
@@ -149,9 +150,7 @@ struct static_poly {
    template <class U>
    explicit constexpr static_poly(const U& point) : m_data{point} {}
 
-   // copy:
-   constexpr static_poly(const static_poly& p) : static_poly(p.m_data) {}
-   // call the array constructor; p has the same size as this.
+   // copy defaulted
 
    template <class U, int N1>
    explicit constexpr static_poly(const static_poly<U, N1>& p)
@@ -246,13 +245,13 @@ struct static_poly {
 template <class T, int N, class U>
 constexpr static_poly<T, std::max(N, 1)> operator + (static_poly<T, N> a, const U& b) {
    if (N) return a += b;
-   return static_poly<T, 1>(b);
+   return static_poly<T, std::max(N, 1)>(b); // N is 0, so the max is 1
 }
 
 template <class T, int N, class U>
 constexpr static_poly<T, std::max(N, 1)> operator - (static_poly<T, N> a, const U& b) {
    if(N) return a -= b;
-   return static_poly<T, 1>(-b);
+   return static_poly<T, std::max(N, 1)>(-b);
 }
 
 template <class T, int N, class U>
@@ -273,12 +272,12 @@ constexpr static_poly<T, N> operator % (static_poly<T, N> a, const U& b) {
 template <class U, class T, int N>
 constexpr static_poly<T, std::max(N, 1)> operator + (const U& a, static_poly<T, N> b) {
    if (N) return b += a;
-   return static_poly<T, 1>(a);
+   return static_poly<T, std::max(N, 1)>(a);
 }
 
 template <class U, class T, int N>
 constexpr static_poly<T,std::max(N, 1)> operator - (const U& a, const static_poly<T, N>& b) {
-   static_poly<T, std::max(N, 1)> result(a);
+   static_poly<T, std::max(N, std::max(N, 1))> result(a);
    return result - b;
 }
 
@@ -304,8 +303,8 @@ constexpr static_poly<T, std::max(N1, N2)> operator - (const static_poly<T, N1>&
 }
 
 template <class T, int N1, int N2>
-constexpr static_poly<T, N1 + N2> operator * (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
-   static_poly<T, N1 + N2> prod;
+constexpr static_poly<T, N1 + N2 - 1> operator * (const static_poly<T, N1>& a, const static_poly<T, N2>& b) {
+   static_poly<T, N1 + N2 - 1> prod;
    if (!a || !b) { // a or b is zero
       return prod;
    }
