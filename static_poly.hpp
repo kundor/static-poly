@@ -316,16 +316,16 @@ constexpr static_poly<T, N1 + N2 - 1> operator * (const static_poly<T, N1>& a, c
 }
 
 namespace detail {
-   // special case of multiplication: two same-sized polys into another of the same size,
+   // special case of multiplication: two polys into another of the same size as the first,
    // assuming that there's enough "headroom" (tail of zero coefficients) so the result fits
-   template <class T, int N>
-   constexpr static_poly<T, N> mul(const static_poly<T, N>& a, const static_poly<T, N>& b) {
+   template <class T, int N, int N2>
+   constexpr static_poly<T, N> mul(const static_poly<T, N>& a, const static_poly<T, N2>& b) {
       static_poly<T, N> prod;
       if (!a || !b) { // a or b is zero
          return prod;
       }
       for (int i = 0; i < N; ++i)
-         for (int j = 0; j < N-i; ++j)
+         for (int j = 0; j < std::min(N - i, N2); ++j)
             prod[i+j] += a[i] * b[j];
       return prod;
    }
@@ -412,8 +412,16 @@ constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
 
 /* Forward declarations for ostream inserter helpers */
 namespace std {
+#ifdef _LIBCPP_VERSION
+// in libc++
+  inline namespace __1 {
+#endif
+
    template <typename T>
    class complex;
+#ifdef _LIBCPP_VERSION
+  }
+#endif
 }
 
 namespace boost { namespace math {

@@ -12,5 +12,5 @@ constexpr auto prod = x2p1 * xm1; // x^3 - x^2 + x - 1
 computes a polynomial product during compilation.
 
 Currently, only clang++ seems capable of compiling this; I tried with clang-703.0.31.
-`example.cpp` must be compiled with the option `-fconstexpr-steps=2097152`.
+`example.cpp` must be compiled with the option `-fconstexpr-steps=4194304`.
 GCC 5 and 6 have internal compiler errors; see [PR71226](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71226).

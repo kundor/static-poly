@@ -59,7 +59,7 @@ int main() {
     constexpr auto phi35 = (power<35>(x) - 1)/phi7/phi5/phi1;
     constexpr auto phi105 = (power<105>(x) - 1)/phi35/phi21/phi15/phi7/phi5/phi3/phi1;
     // in clang by default, "constexpr evaluation hit maximum step limit"
-    // compile with -fconstexpr-steps=2097152
+    // compile with -fconstexpr-steps=4194304
     cout << "ϕ105: " << phi105 << '\n'; // The first example with a coefficient other than ±1
     
     return 0;
