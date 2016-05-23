@@ -11,4 +11,6 @@ constexpr auto prod = x2p1 * xm1; // x^3 - x^2 + x - 1
 
 computes a polynomial product during compilation.
 
-Currently, only clang++ seems capable of compiling this; I tried with clang-703.0.31. GCC 6.1 has an internal compiler error. GCC 5.3 says `'(&#'result_decl' not supported by dump_expr#<expression error>)`.
+Currently, only clang++ seems capable of compiling this; I tried with clang-703.0.31.
+`example.cpp` must be compiled with the option `-fconstexpr-steps=2097152`.
+GCC 5 and 6 have internal compiler errors; see [PR71226](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71226).
