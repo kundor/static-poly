@@ -18,7 +18,8 @@
 #include <type_traits> // enable_if, is_integral
 #include <utility> // pair
 #include <initializer_list>
-#include <stdexcept>
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/count_if.hpp>
 #include "evaluate.hpp"
 
 template <typename T, int N>
@@ -409,6 +410,20 @@ constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
  * but how big must the result be? We can't determine the return type
  * at compile time. */
 
+/* Forward declarations for ostream inserter helpers */
+namespace std {
+   template <typename T>
+   class complex;
+}
+
+namespace boost { namespace math {
+   template <class T>
+   class quaternion;
+
+   template <class T>
+   class octonion;
+}}
+
 namespace detail {
    struct xpow {
       int i;
@@ -421,11 +436,55 @@ namespace detail {
          os << "x^" << x.i;
       return os;
    }
+
+   template <typename T>
+   bool is_negative(T t) {
+       return t < T{0};
+   }
+
+   template <typename T>
+   bool is_negative(std::complex<T> ct) {
+      return ct.real() < T{0} ||
+            (ct.real() == T{0} && ct.imag() < T{0});
+   }
+
+   template <typename T>
+   bool is_negative(boost::math::quaternion<T> q) {
+      // only if the first nonzero element is negative, and the majority of
+      // nonzero terms are negative.
+      using boost::range::find_if;
+      using boost::range::count_if;
+      T vals[] = {q.R_component_1(), q.R_component_2(),
+                  q.R_component_3(), q.R_component_4()};
+      auto nonzero = find_if(vals, [](T val){ return val != T{0}; });
+      if (nonzero == boost::end(vals)) return false;
+      return *nonzero < T{0} &&
+             count_if(vals, [](T val){ return val < T{0}; }) >=
+             count_if(vals, [](T val){ return val > T{0}; });
+   }
+
+   template <typename T>
+   bool is_negative(boost::math::octonion<T> q) {
+      // only if the first nonzero element is negative, and the majority of
+      // nonzero terms are negative.
+      using boost::range::find_if;
+      using boost::range::count_if;
+      T vals[] = {q.R_component_1(), q.R_component_2(),
+                  q.R_component_3(), q.R_component_4(),
+                  q.R_component_5(), q.R_component_6(),
+                  q.R_component_7(), q.R_component_8()};
+      auto nonzero = find_if(vals, [](T val){ return val != T{0}; });
+      if (nonzero == boost::end(vals)) return false;
+      return *nonzero < T{0} &&
+             count_if(vals, [](T val){ return val < T{0}; }) >=
+             count_if(vals, [](T val){ return val > T{0}; });
+   }
 }
 
 template <class T, int N>
 inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& poly) {
    using detail::xpow;
+   using detail::is_negative;
    int i = poly.degree();
    if (i == -1)
       return os << '0';
@@ -441,24 +500,20 @@ inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& pol
    for (--i; i > 0; --i) {
       if (poly[i] == T{1})
          os << " + " << xpow{i};
-      else if (poly[i] > T{0})
-         os << " + " << poly[i] << xpow{i};
       else if (poly[i] == T{-1})
          os << " - " << xpow{i};
-      else if (poly[i] < T{0})
+      else if (is_negative(poly[i]))
          os << " - " << -poly[i] << xpow{i};
+      else if (poly[i] != T{0})
+         os << " + " << poly[i] << xpow{i};
    }
 
-   if (poly[0] > T{0})
-      os << " + " << poly[0];
-   else if (poly[0] < T{0})
+   if (is_negative(poly[0]))
       os << " - " << -poly[0];
+   else if (poly[0] != T{0})
+      os << " + " << poly[0];
    return os;
 }
-// Todo: if T does not have <, > (e.g. complex) specialize
-// is_positive (e.g., for complex, quaternion--if initial or majority are positive
-// (i.e. only introduce with " - " if initial and majority are negative)
-
 #endif // NAM_STATIC_POLYNOMIAL_HPP
 
 
