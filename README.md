@@ -26,4 +26,5 @@ Boost.TypeTraits, and Boost.Math.  These also suffice for the main example
 For the complex example, this [static_math library](https://github.com/kundor/static_math)
 for compile-time mathematics support is required.  The standard library complex
 class has constexpr constructors and `real()`, `imag()` accessors, but none of
-the operators are constexpr!  This seems like something that could be changed.
+the operators are constexpr!  This seems like something that could be changed
+(it is [Library Working Group issue 2693](https://cplusplus.github.io/LWG/lwg-active.html#2693).)
