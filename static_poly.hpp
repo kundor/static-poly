@@ -20,7 +20,6 @@
 #include <initializer_list>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/count_if.hpp>
-#include <boost/type_traits/is_complex.hpp>
 #include "evaluate.hpp"
 
 template <typename T, int N>
@@ -203,21 +202,10 @@ struct static_poly {
       return *this;
    }
 
-   /* Cannot use operator -= or operator - on complex values :@
-    * We should do this for EVERY operator... */
    template <class U> constexpr
-   std::enable_if_t<!std::is_void<U>::value && !boost::is_complex<T>::value, static_poly>&
-   operator -=(const U& value) {
+   static_poly& operator -=(const U& value) {
       static_assert(N, "Cannot modify zero polynomial");
       m_data[0] -= value;
-      return *this;
-   }
-
-   template <class U> constexpr
-   std::enable_if_t<boost::is_complex<U>::value && boost::is_complex<T>::value, static_poly>&
-   operator -=(const U& value) {
-      static_assert(N, "Cannot modify zero polynomial");
-      m_data[0] = T{m_data[0].real() - value.real(), m_data[0].imag() - value.imag()};
       return *this;
    }
 
@@ -336,13 +324,8 @@ namespace detail {
          return prod;
       }
       for (int i = 0; i < N; ++i)
-         for (int j = 0; j < std::min(N - i, N2); ++j) {
-            if (boost::is_complex<T>::value)
-               prod[i+j] = T{prod[i+j].real() + a[i].real() * b[j].real() - a[i].imag() * b[j].imag(),
-                             prod[i+j].imag() + a[i].real() * b[j].imag() + a[i].imag() * b[j].real()};
-            else
-               prod[i+j] += a[i] * b[j];
-         }
+         for (int j = 0; j < std::min(N - i, N2); ++j)
+            prod[i+j] += a[i] * b[j];
       return prod;
    }
 }
@@ -427,17 +410,9 @@ constexpr static_poly<T, N*exp> power(const static_poly<T, N>& b) {
  * at compile time. */
 
 /* Forward declarations for ostream inserter helpers */
-namespace std {
-#ifdef _LIBCPP_VERSION
-// in libc++
-  inline namespace __1 {
-#endif
-
+namespace smath {
    template <typename T>
-   class complex;
-#ifdef _LIBCPP_VERSION
-  }
-#endif
+   struct complex;
 }
 
 namespace boost { namespace math {
@@ -467,9 +442,9 @@ namespace detail {
    }
 
    template <typename T>
-   bool is_negative(std::complex<T> ct) {
-      return ct.real() < T{0} ||
-            (ct.real() == T{0} && ct.imag() < T{0});
+   bool is_negative(smath::complex<T> ct) {
+      return ct.real < T{0} ||
+            (ct.real == T{0} && ct.imag.value < T{0});
    }
 
    template <typename T>
