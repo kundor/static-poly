@@ -1,31 +1,9 @@
 #include <iostream>
 #include <boost/math/constants/constants.hpp> // pi
 #include <static_math/complex.h> // constexpr complex class
-#include "static_poly.hpp"
+#include "static_poly_io.hpp"
 
 using std::cout;
-
-/***  Nicer output for complex numbers ***/
-
-namespace smath { // so it can be found
-    std::ostream& operator << (std::ostream& os, const smath::complex<double>& cd) {
-        using ::detail::is_zero;
-        using ::detail::ifnotone;
-        if (is_zero(cd.real)) {// real part is zero or denorm (or ∞, NaN)
-            if (is_zero(cd.imag.value))
-                return os << '0';
-            return os << ifnotone(cd.imag.value) << 'i';
-        }
-        if (is_zero(cd.imag.value)) // imag part is zero or denorm (or ∞, NaN)
-            return os << cd.real;
-        os << '(' << cd.real;
-        if (cd.imag.value < 0.)
-            os << " - " << ifnotone(-cd.imag.value);
-        else
-            os << " + " << ifnotone(cd.imag.value);
-        return os << "i)";
-    }
-}
 
 /*** Greatest common divisor ***/
 constexpr int gcd(int m, int n) {
