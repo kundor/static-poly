@@ -20,6 +20,7 @@
 #include <initializer_list>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/count_if.hpp>
+#include <boost/type_traits/is_complex.hpp>
 #include "evaluate.hpp"
 
 template <typename T, int N>
@@ -168,7 +169,7 @@ struct static_poly {
 
    constexpr size_type degree() const {
       for (int i = N-1; i >= 0; --i)
-         if (m_data[i])
+         if (m_data[i] != T{0})
             return i;
       return -1; // zero polynomial: should really be -∞, or undefined.
    }
@@ -202,10 +203,21 @@ struct static_poly {
       return *this;
    }
 
-   template <class U>
-   constexpr static_poly& operator -=(const U& value) {
+   /* Cannot use operator -= or operator - on complex values :@
+    * We should do this for EVERY operator... */
+   template <class U> constexpr
+   std::enable_if_t<!std::is_void<U>::value && !boost::is_complex<T>::value, static_poly>&
+   operator -=(const U& value) {
       static_assert(N, "Cannot modify zero polynomial");
       m_data[0] -= value;
+      return *this;
+   }
+
+   template <class U> constexpr
+   std::enable_if_t<boost::is_complex<U>::value && boost::is_complex<T>::value, static_poly>&
+   operator -=(const U& value) {
+      static_assert(N, "Cannot modify zero polynomial");
+      m_data[0] = T{m_data[0].real() - value.real(), m_data[0].imag() - value.imag()};
       return *this;
    }
 
@@ -241,7 +253,6 @@ struct static_poly {
       return degree() >= 0;
    }
 };
-
 
 template <class T, int N, class U>
 constexpr static_poly<T, std::max(N, 1)> operator + (static_poly<T, N> a, const U& b) {
@@ -325,8 +336,13 @@ namespace detail {
          return prod;
       }
       for (int i = 0; i < N; ++i)
-         for (int j = 0; j < std::min(N - i, N2); ++j)
-            prod[i+j] += a[i] * b[j];
+         for (int j = 0; j < std::min(N - i, N2); ++j) {
+            if (boost::is_complex<T>::value)
+               prod[i+j] = T{prod[i+j].real() + a[i].real() * b[j].real() - a[i].imag() * b[j].imag(),
+                             prod[i+j].imag() + a[i].real() * b[j].imag() + a[i].imag() * b[j].real()};
+            else
+               prod[i+j] += a[i] * b[j];
+         }
       return prod;
    }
 }
