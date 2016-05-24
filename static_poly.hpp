@@ -18,8 +18,10 @@
 #include <type_traits> // enable_if, is_integral
 #include <utility> // pair
 #include <initializer_list>
+#include <cmath> //isnormal, fabs
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/count_if.hpp>
+#include <boost/math/special_functions/relative_difference.hpp>
 #include "evaluate.hpp"
 
 template <typename T, int N>
@@ -250,7 +252,7 @@ constexpr static_poly<T, std::max(N, 1)> operator + (static_poly<T, N> a, const 
 
 template <class T, int N, class U>
 constexpr static_poly<T, std::max(N, 1)> operator - (static_poly<T, N> a, const U& b) {
-   if(N) return a -= b;
+   if (N) return a -= b;
    return static_poly<T, std::max(N, 1)>(-b);
 }
 
@@ -423,6 +425,7 @@ namespace boost { namespace math {
    class octonion;
 }}
 
+/** Helpers for the stream inserter **/
 namespace detail {
    struct xpow {
       int i;
@@ -437,14 +440,70 @@ namespace detail {
    }
 
    template <typename T>
+   std::enable_if_t<std::is_floating_point<T>::value, bool>
+   is_zero(T n) {
+       if (!std::isnormal(n))
+           return true; // zero or denorm, or NaN or ∞
+       return std::fabs(n) < 1e-11;
+   }
+
+   template <typename T>
+   std::enable_if_t<!std::is_floating_point<T>::value, bool>
+   is_zero(T n) {
+       return n == T{0};
+   }
+
+   template <typename T>
+   bool is_zero(smath::complex<T> ct) {
+       return is_zero(ct.real) && is_zero(ct.imag.value);
+   }
+
+   template <typename T>
+   struct notone {
+       T val;
+   };
+
+   template <typename T>
+   notone<T> ifnotone(T val) {
+       return {val};
+   }
+
+   template <typename T>
+   std::enable_if_t<std::is_floating_point<T>::value, bool>
+   isone(T n) {
+      using boost::math::relative_difference;
+      return relative_difference(1.0, n) < 1e-11;
+   }
+
+   template <typename T>
+   std::enable_if_t<!std::is_floating_point<T>::value, bool>
+   isone(T n) {
+      return n == T{1};
+   }
+
+   template <typename T>
+   bool isone(smath::complex<T> n) {
+      return isone(n.real) && is_zero(n.imag.value);
+   }
+
+   template <typename T>
+   std::ostream& operator << (std::ostream& os, notone<T> io) {
+      if (isone(-io.val))
+         return os << '-';
+      if (isone(io.val))
+         return os;
+      return os << io.val;
+   }
+
+   template <typename T>
    bool is_negative(T t) {
-       return t < T{0};
+       return t < T{0} && !is_zero(t);
    }
 
    template <typename T>
    bool is_negative(smath::complex<T> ct) {
-      return ct.real < T{0} ||
-            (ct.real == T{0} && ct.imag.value < T{0});
+      return (ct.real < T{0} && !is_zero(ct.real)) ||
+            (is_zero(ct.real) && ct.imag.value < T{0} && !is_zero(ct.imag.value));
    }
 
    template <typename T>
@@ -455,11 +514,11 @@ namespace detail {
       using boost::range::count_if;
       T vals[] = {q.R_component_1(), q.R_component_2(),
                   q.R_component_3(), q.R_component_4()};
-      auto nonzero = find_if(vals, [](T val){ return val != T{0}; });
+      auto nonzero = find_if(vals, [](T val){ return !is_zero(val); });
       if (nonzero == boost::end(vals)) return false;
       return *nonzero < T{0} &&
-             count_if(vals, [](T val){ return val < T{0}; }) >=
-             count_if(vals, [](T val){ return val > T{0}; });
+             count_if(vals, [](T val){ return val < T{0} && !is_zero(val); }) >=
+             count_if(vals, [](T val){ return val > T{0} && !is_zero(val); });
    }
 
    template <typename T>
@@ -472,39 +531,31 @@ namespace detail {
                   q.R_component_3(), q.R_component_4(),
                   q.R_component_5(), q.R_component_6(),
                   q.R_component_7(), q.R_component_8()};
-      auto nonzero = find_if(vals, [](T val){ return val != T{0}; });
+      auto nonzero = find_if(vals, [](T val){ return !is_zero(val); });
       if (nonzero == boost::end(vals)) return false;
       return *nonzero < T{0} &&
-             count_if(vals, [](T val){ return val < T{0}; }) >=
-             count_if(vals, [](T val){ return val > T{0}; });
+             count_if(vals, [](T val){ return val < T{0} && !is_zero(val); }) >=
+             count_if(vals, [](T val){ return val > T{0} && !is_zero(val); });
    }
-}
+} // close namespace detail
 
 template <class T, int N>
 inline std::ostream& operator << (std::ostream& os, const static_poly<T, N>& poly) {
-   using detail::xpow;
-   using detail::is_negative;
+   using namespace detail;
+
    int i = poly.degree();
    if (i == -1)
       return os << '0';
    if (i == 0)
       return os << poly[0];
 
-   if (poly[i] == T{-1})
-      os << '-';
-   else if (poly[i] != T{1})
-      os << poly[i];
-   os << xpow{i};
+   os << ifnotone(poly[i]) << xpow{i};
 
    for (--i; i > 0; --i) {
-      if (poly[i] == T{1})
-         os << " + " << xpow{i};
-      else if (poly[i] == T{-1})
-         os << " - " << xpow{i};
-      else if (is_negative(poly[i]))
-         os << " - " << -poly[i] << xpow{i};
-      else if (poly[i] != T{0})
-         os << " + " << poly[i] << xpow{i};
+      if (is_negative(poly[i]))
+         os << " - " << ifnotone(-poly[i]) << xpow{i};
+      else if (!is_zero(poly[i]))
+         os << " + " << ifnotone(poly[i]) << xpow{i};
    }
 
    if (is_negative(poly[0]))
