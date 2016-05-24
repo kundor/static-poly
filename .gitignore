@@ -27,6 +27,9 @@
 *.out
 *.app
 example
+complex-example
 
 # Vim files
 .*.swp
+
+static_math/
