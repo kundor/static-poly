@@ -27,7 +27,7 @@ int main() {
     cout << cp2 << '\n';
 
     constexpr int i = qux(prod); // The default copy constructor is constexpr
-    cout << "Degree" << i << "\n\n";
+    cout << "Degree " << i << "\n\n";
 
     constexpr static_poly<int, 2> x{0,1}; // x
     constexpr auto bigprod = (power<5>(x) - 3*power<4>(x) + 2*power<3>(x) - 7*x*x + 4*x + 1)
@@ -61,6 +61,9 @@ int main() {
     // in clang by default, "constexpr evaluation hit maximum step limit"
     // compile with -fconstexpr-steps=4194304
     cout << "ϕ105: " << phi105 << '\n'; // The first example with a coefficient other than ±1
+
+    constexpr bool eq = ( (x*x - 1) == (x + 1)*(x - 1) );
+    cout << "x^2 - 1 = (x + 1)(x - 1)? " << eq << '\n';
     
     return 0;
 }
